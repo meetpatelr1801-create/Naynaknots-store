@@ -1,0 +1,12 @@
+services:
+  naynaknots:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 5000
+      NAYNAKNOTS_SECRET: ${NAYNAKNOTS_SECRET}
+    volumes:
+      - ./server:/app/server

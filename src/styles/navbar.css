@@ -1,0 +1,24 @@
+.navbar{
+  height:76px;position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  padding:0 max(22px,calc((100vw - 1180px)/2));
+  background:rgba(255,253,249,.94);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);box-shadow:0 3px 18px rgba(45,37,31,.04)
+}
+.brand{display:flex;align-items:center;gap:10px;font:700 20px "Space Grotesk",sans-serif;white-space:nowrap;flex-shrink:0}
+.brand img{width:44px;height:44px;display:block;object-fit:cover;border-radius:50%;border:1px solid #cfc3bb;box-shadow:0 4px 12px rgba(45,37,31,.12)}
+.brand span{line-height:1}
+.navbar nav{display:flex;align-items:center;justify-content:center;gap:25px;flex:1}
+.navbar nav a{position:relative;padding:28px 0;color:var(--muted);font-size:13px;font-weight:700;white-space:nowrap;transition:color .18s ease}
+.navbar nav a:hover,.navbar nav a.active{color:var(--ink)}
+.navbar nav a.active:after{content:"";position:absolute;left:0;right:0;bottom:19px;height:2px;background:var(--accent);border-radius:99px}
+.nav-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.nav-btn{min-height:36px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:700;white-space:nowrap}
+.nav-btn:hover{border-color:#c7b9b0;background:#fff}
+button.nav-btn{cursor:pointer}
+.cart{min-height:36px;display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:9px;background:var(--ink);color:#fff;font-size:12px;font-weight:800;white-space:nowrap}
+.cart:hover{background:var(--accent-dark)}
+.cart b{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:2px 5px;border-radius:99px;background:var(--accent);color:#fff;font-size:10px}
+@media(max-width:1000px){.navbar nav{gap:16px}.navbar nav a{font-size:12px}.brand span{display:none}}
+@media(max-width:760px){.navbar{height:68px;padding:0 14px}.navbar nav{display:none}.brand img{width:42px;height:42px}.nav-actions{margin-left:auto}.nav-btn{padding:8px 10px}.cart{padding:8px 10px}}
+@media(max-width:430px){.nav-actions .nav-btn{max-width:90px;overflow:hidden;text-overflow:ellipsis}.brand img{width:40px;height:40px}}

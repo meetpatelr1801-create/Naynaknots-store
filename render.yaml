@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: naynaknots
+    runtime: node
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NAYNAKNOTS_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000

@@ -1,0 +1,120 @@
+{
+  "users": [
+    {
+      "id": "admin-1",
+      "name": "Naynaknots Admin",
+      "email": "admin@naynaknots.com",
+      "role": "admin",
+      "passwordHash": "5435db8ecb792e58cbe7246e784898ceaddaa9a95ba0d440dc1e9ee3477a11b96b9aaf1ae5cabb47777aeb5c8c436c6769b74fbc5300943cffe090dab93bcbb0",
+      "passwordSalt": "5d5b4c27a7c2c0b70453560d304b909c"
+    },
+    {
+      "id": "7ddc61ae-12c2-4e63-a91f-617ff81d8708",
+      "name": "meet",
+      "email": "meet@gmail.com",
+      "passwordHash": "615b5cab0b798cef336e69655d0368eb84e094a8132ef65cbd0202a2cc2c8cc3df569c08c09fb76949b0ba95a90a9bcc38d461180794a0428902244c96d8a8fc",
+      "passwordSalt": "edcb170147bed6feed7147f8de3503a5",
+      "role": "customer",
+      "createdAt": "2026-08-25T19:04:26.837Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ORD-1787684728142-976",
+      "createdAt": "2026-08-25T19:05:28.146Z",
+      "status": "Placed",
+      "userId": "7ddc61ae-12c2-4e63-a91f-617ff81d8708",
+      "email": "meet@gmail.com",
+      "customer": {
+        "name": "meet",
+        "phone": "63521998619",
+        "city": "ahemdabad",
+        "address": "m-112",
+        "note": ""
+      },
+      "items": [
+        {
+          "id": 1,
+          "name": "Daisy Bloom",
+          "price": 299,
+          "qty": 1
+        },
+        {
+          "id": 2,
+          "name": "Berry Bunny",
+          "price": 549,
+          "qty": 1
+        },
+        {
+          "id": 3,
+          "name": "Mini Tulip",
+          "price": 249,
+          "qty": 1
+        },
+        {
+          "id": 4,
+          "name": "Cloud Bear",
+          "price": 699,
+          "qty": 1
+        }
+      ],
+      "total": 1796
+    }
+  ],
+  "customOrders": [],
+  "messages": [],
+  "products": [
+    {
+      "id": 1,
+      "name": "Daisy Bloom",
+      "price": 299,
+      "category": "Flowers",
+      "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=900&q=85",
+      "description": "A forever crochet daisy for desks, gifts and sunny corners.",
+      "stock": 11,
+      "rating": 5
+    },
+    {
+      "id": 2,
+      "name": "Berry Bunny",
+      "price": 549,
+      "category": "Plushies",
+      "image": "https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=900&q=85",
+      "description": "A tiny handmade bunny made to be hugged and kept.",
+      "stock": 6,
+      "rating": 5
+    },
+    {
+      "id": 3,
+      "name": "Mini Tulip",
+      "price": 249,
+      "category": "Flowers",
+      "image": "https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=900&q=85",
+      "description": "A cheerful crochet tulip that never wilts.",
+      "stock": 14,
+      "rating": 4.8
+    },
+    {
+      "id": 4,
+      "name": "Cloud Bear",
+      "price": 699,
+      "category": "Plushies",
+      "image": "https://images.unsplash.com/photo-1585832770485-e68a5dbfad52?auto=format&fit=crop&w=900&q=85",
+      "description": "A soft little bear with a cloud-like handmade feel.",
+      "stock": 4,
+      "rating": 5
+    },
+    {
+      "id": 5,
+      "name": "Sunflower Bouquet",
+      "price": 400,
+      "category": "Bouquets",
+      "image": "/uploads/product-1787684160931-9a76a8bc-1b5d-43bb-a065-458e6d7d43d8.jpg",
+      "description": "Interesting",
+      "stock": 10,
+      "rating": 5,
+      "createdAt": "2026-08-25T18:56:19.959Z"
+    }
+  ],
+  "wishlists": []
+}
