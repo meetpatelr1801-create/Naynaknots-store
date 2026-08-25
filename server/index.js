@@ -6,6 +6,7 @@ import dns from "dns";
 import { fileURLToPath } from "url";
 import { MongoClient } from "mongodb";
 import "dotenv/config";
+import cors from "cors";
 
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
@@ -285,6 +286,13 @@ const starterProducts = [
 ];
 
 const app = express();
+
+app.use(
+  cors({
+    origin: true,
+    credentials: true
+  })
+);
 
 app.use(
   express.json({
