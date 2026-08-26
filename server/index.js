@@ -234,57 +234,6 @@ function rateLimit(limit, windowMs) {
   };
 }
 
-const starterProducts = [
-  {
-    id: 1,
-    name: "Daisy Bloom",
-    price: 299,
-    category: "Flowers",
-    image:
-      "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=900&q=85",
-    description:
-      "A forever crochet daisy for desks, gifts and sunny corners.",
-    stock: 12,
-    rating: 5
-  },
-  {
-    id: 2,
-    name: "Berry Bunny",
-    price: 549,
-    category: "Plushies",
-    image:
-      "https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=900&q=85",
-    description:
-      "A tiny handmade bunny made to be hugged and kept.",
-    stock: 7,
-    rating: 5
-  },
-  {
-    id: 3,
-    name: "Mini Tulip",
-    price: 249,
-    category: "Flowers",
-    image:
-      "https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=900&q=85",
-    description:
-      "A cheerful crochet tulip that never wilts.",
-    stock: 15,
-    rating: 4.8
-  },
-  {
-    id: 4,
-    name: "Cloud Bear",
-    price: 699,
-    category: "Plushies",
-    image:
-      "https://images.unsplash.com/photo-1585832770485-e68a5dbfad52?auto=format&fit=crop&w=900&q=85",
-    description:
-      "A soft little bear with a cloud-like handmade feel.",
-    stock: 5,
-    rating: 5
-  }
-];
-
 const app = express();
 
 app.use(
@@ -1374,6 +1323,7 @@ app.post(
         rating
       } = req.body || {};
 
+      // Clean input
       const productName =
         String(name || "").trim();
 
@@ -1392,9 +1342,7 @@ app.post(
       const productStock =
         Math.max(
           0,
-          Math.floor(
-            Number(stock) || 0
-          )
+          Math.floor(Number(stock) || 0)
         );
 
       const productRating =
@@ -1406,6 +1354,7 @@ app.post(
           )
         );
 
+      // Validate required fields
       if (
         !productName ||
         !productCategory ||
@@ -1420,12 +1369,11 @@ app.post(
         });
       }
 
+      // Find highest existing product ID
       const lastProduct =
         await products()
           .find({})
-          .sort({
-            id: -1
-          })
+          .sort({ id: -1 })
           .limit(1)
           .next();
 
@@ -1437,28 +1385,44 @@ app.post(
           ? Number(lastProduct.id) + 1
           : 1;
 
+      // Create product
       const product = {
         id: nextId,
+
         name: productName,
+
         price: productPrice,
+
         category: productCategory,
+
         image: productImage,
+
         description: productDescription,
+
         stock: productStock,
+
         rating: productRating,
+
         createdAt:
           new Date().toISOString()
       };
 
-      await products().insertOne(
-        product
+      // Save ONLY the new product
+      await products().insertOne(product);
+
+      console.log(
+        `✅ Product added: ${product.name} (ID: ${product.id})`
       );
 
       res.status(201).json({
         product
       });
+
     } catch (error) {
-      console.error(error);
+      console.error(
+        "❌ ADD PRODUCT ERROR:",
+        error
+      );
 
       res.status(500).json({
         message:
@@ -1596,6 +1560,12 @@ app.delete(
       const id =
         Number(req.params.id);
 
+      if (!Number.isInteger(id)) {
+        return res.status(400).json({
+          message: "Invalid product ID."
+        });
+      }
+
       const result =
         await products().deleteOne({
           id
@@ -1608,6 +1578,7 @@ app.delete(
         });
       }
 
+      // Remove deleted product from wishlists
       await wishlists().updateMany(
         {},
         {
@@ -1617,11 +1588,20 @@ app.delete(
         }
       );
 
+      console.log(
+        `🗑️ Product deleted: ${id}`
+      );
+
       res.json({
-        ok: true
+        ok: true,
+        deletedId: id
       });
+
     } catch (error) {
-      console.error(error);
+      console.error(
+        "❌ DELETE PRODUCT ERROR:",
+        error
+      );
 
       res.status(500).json({
         message:
@@ -1676,6 +1656,7 @@ async function ensureDatabase() {
       )
     );
 
+  // Create missing collections
   for (
     const collectionName of
       requiredCollections
@@ -1695,30 +1676,7 @@ async function ensureDatabase() {
     }
   }
 
-  // Your migrated MongoDB data is preserved.
-  // We only add starter products if the
-  // products collection is completely empty.
-
-  const productCount =
-    await products()
-      .countDocuments();
-
-  if (productCount === 0) {
-    await products().insertMany(
-      starterProducts.map(
-        product => ({
-          ...product,
-          createdAt:
-            new Date().toISOString()
-        })
-      )
-    );
-
-    console.log(
-      "✅ Starter products added."
-    );
-  }
-
+  // Create indexes
   await Promise.allSettled([
     users().createIndex(
       { id: 1 },
