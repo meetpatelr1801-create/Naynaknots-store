@@ -175,7 +175,7 @@ export default function Shop({
                 e.target.value
               )
             }
-            placeholder="Search flowers, plushies, charms..."
+            placeholder="Search flowers, plushies, KeyChain..."
             aria-label="Search products"
           />
         </div>

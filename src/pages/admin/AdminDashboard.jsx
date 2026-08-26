@@ -1227,7 +1227,7 @@ export default function AdminDashboard({
                   </option>
 
                   <option>
-                    Charms
+                    KeyChain
                   </option>
 
                   <option>
