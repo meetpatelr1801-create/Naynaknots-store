@@ -7,7 +7,7 @@ const blank = {
   image: "",
   description: "",
   stock: 0,
-  rating: 5
+  rating: 5,
 };
 
 const orderStatuses = [
@@ -16,7 +16,7 @@ const orderStatuses = [
   "Preparing",
   "Ready",
   "Completed",
-  "Cancelled"
+  "Cancelled",
 ];
 
 const customStatuses = [
@@ -26,33 +26,41 @@ const customStatuses = [
   "In Progress",
   "Ready",
   "Completed",
-  "Cancelled"
+  "Cancelled",
 ];
 
-/*
- * Your backend is a separate Render service.
- *
- * In production set:
- *
- * VITE_API_URL=https://your-backend-url.onrender.com
- *
- * If VITE_API_URL is empty, local relative URLs continue
- * to work with the Vite proxy.
- */
-const API_BASE =
-  String(import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+/* --------------------------------------------------
+   API CONFIG
+-------------------------------------------------- */
+
+const API_BASE = String(
+  import.meta.env.VITE_API_URL || ""
+).replace(/\/+$/, "");
+
+function getApiUrl(path) {
+  if (!path) return API_BASE || "/";
+
+  if (
+    path.startsWith("http://") ||
+    path.startsWith("https://")
+  ) {
+    return path;
+  }
+
+  return `${API_BASE}${path}`;
+}
 
 /*
- * Convert backend-relative URLs such as:
- *
- * /uploads/product-123.jpg
- *
- * into:
- *
- * https://your-backend.onrender.com/uploads/product-123.jpg
- *
- * Absolute URLs are left unchanged.
- */
+  Converts:
+    /api/images/abc123
+
+  into:
+    https://naynaknots-store.onrender.com/api/images/abc123
+
+  when VITE_API_URL is configured.
+
+  Absolute URLs and data URLs are returned unchanged.
+*/
 function getImageUrl(url) {
   if (!url) return "";
 
@@ -75,34 +83,27 @@ function getImageUrl(url) {
   return value;
 }
 
-function getApiUrl(path) {
-  if (!path) return API_BASE || "/";
-
-  if (
-    path.startsWith("http://") ||
-    path.startsWith("https://")
-  ) {
-    return path;
-  }
-
-  return `${API_BASE}${path}`;
-}
+/* --------------------------------------------------
+   ADMIN DASHBOARD
+-------------------------------------------------- */
 
 export default function AdminDashboard({
   token,
-  onProductsChange
+  onProductsChange,
 }) {
   const [data, setData] = useState({
     users: [],
     products: [],
     orders: [],
     customOrders: [],
-    messages: []
+    messages: [],
   });
 
   const [tab, setTab] = useState("overview");
 
-  const [form, setForm] = useState(blank);
+  const [form, setForm] = useState({
+    ...blank,
+  });
 
   const [editingId, setEditingId] = useState(null);
 
@@ -119,18 +120,19 @@ export default function AdminDashboard({
   const [messageSearch, setMessageSearch] = useState("");
 
   const headers = {
-    Authorization: `Bearer ${token}`
+    Authorization: `Bearer ${token}`,
   };
 
-  /*
-   * Load complete admin data
-   */
+  /* --------------------------------------------------
+     LOAD ADMIN DATA
+  -------------------------------------------------- */
+
   const load = async () => {
     try {
       const r = await fetch(
         getApiUrl("/api/admin/data"),
         {
-          headers
+          headers,
         }
       );
 
@@ -145,19 +147,28 @@ export default function AdminDashboard({
 
       d.orders = (d.orders || []).map((o) => ({
         ...o,
-        status: o.status || "Placed"
+        status: o.status || "Placed",
       }));
 
       d.customOrders = (
         d.customOrders || []
       ).map((o) => ({
         ...o,
-        status: o.status || "Submitted"
+        status: o.status || "Submitted",
       }));
 
-      setData(d);
+      setData({
+        users: d.users || [],
+        products: d.products || [],
+        orders: d.orders || [],
+        customOrders: d.customOrders || [],
+        messages: d.messages || [],
+      });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "ADMIN DATA ERROR:",
+        error
+      );
 
       setMessage(
         "Could not connect to the server."
@@ -169,33 +180,34 @@ export default function AdminDashboard({
     load();
   }, []);
 
-  /*
-   * Update product form
-   */
+  /* --------------------------------------------------
+     UPDATE FORM
+  -------------------------------------------------- */
+
   const update = (key, value) => {
     setForm((current) => ({
       ...current,
-      [key]: value
+      [key]: value,
     }));
   };
 
-  /*
-   * Upload product image
-   */
+  /* --------------------------------------------------
+     IMAGE UPLOAD
+  -------------------------------------------------- */
+
   const uploadImage = async (file) => {
     if (!file) return;
 
-    if (
-      ![
-        "image/png",
-        "image/jpeg",
-        "image/webp"
-      ].includes(file.type)
-    ) {
+    const allowedTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
       setMessage(
         "Please choose a PNG, JPG or WebP image."
       );
-
       return;
     }
 
@@ -203,7 +215,6 @@ export default function AdminDashboard({
       setMessage(
         "Image must be smaller than 5 MB."
       );
-
       return;
     }
 
@@ -211,9 +222,10 @@ export default function AdminDashboard({
     setMessage("");
 
     try {
-      /*
-       * Read selected image
-       */
+      /* ---------------------------------------------
+         READ IMAGE
+      --------------------------------------------- */
+
       const dataUrl = await new Promise(
         (resolve, reject) => {
           const reader = new FileReader();
@@ -234,9 +246,10 @@ export default function AdminDashboard({
         }
       );
 
-      /*
-       * Resize image before uploading
-       */
+      /* ---------------------------------------------
+         OPTIMIZE IMAGE
+      --------------------------------------------- */
+
       const optimized = await new Promise(
         (resolve, reject) => {
           const img = new Image();
@@ -258,20 +271,16 @@ export default function AdminDashboard({
                 "canvas"
               );
 
-            canvas.width =
-              Math.round(
-                img.width * scale
-              );
+            canvas.width = Math.round(
+              img.width * scale
+            );
 
-            canvas.height =
-              Math.round(
-                img.height * scale
-              );
+            canvas.height = Math.round(
+              img.height * scale
+            );
 
             const ctx =
-              canvas.getContext(
-                "2d"
-              );
+              canvas.getContext("2d");
 
             if (!ctx) {
               reject(
@@ -279,7 +288,6 @@ export default function AdminDashboard({
                   "Could not process image."
                 )
               );
-
               return;
             }
 
@@ -311,9 +319,10 @@ export default function AdminDashboard({
         }
       );
 
-      /*
-       * Upload to backend
-       */
+      /* ---------------------------------------------
+         SEND IMAGE TO BACKEND
+      --------------------------------------------- */
+
       const r = await fetch(
         getApiUrl(
           "/api/admin/upload-image"
@@ -324,12 +333,12 @@ export default function AdminDashboard({
           headers: {
             ...headers,
             "Content-Type":
-              "application/json"
+              "application/json",
           },
 
           body: JSON.stringify({
-            dataUrl: optimized
-          })
+            dataUrl: optimized,
+          }),
         }
       );
 
@@ -342,14 +351,20 @@ export default function AdminDashboard({
       }
 
       /*
-       * Keep the ORIGINAL backend URL
-       * in the form.
-       *
-       * Example:
-       * /uploads/product-123.jpg
-       */
-      const uploadedUrl =
-        String(d.url || "").trim();
+        IMPORTANT:
+
+        Backend should return:
+
+        {
+          url: "/api/images/XXXXXXXX"
+        }
+
+        We store that URL in the product.
+      */
+
+      const uploadedUrl = String(
+        d.url || ""
+      ).trim();
 
       if (!uploadedUrl) {
         throw new Error(
@@ -357,14 +372,19 @@ export default function AdminDashboard({
         );
       }
 
+      /* ---------------------------------------------
+         SAVE IMAGE URL IN FORM
+      --------------------------------------------- */
+
       setForm((current) => ({
         ...current,
-        image: uploadedUrl
+        image: uploadedUrl,
       }));
 
-      /*
-       * Preview uses the FULL backend URL.
-       */
+      /* ---------------------------------------------
+         SHOW PREVIEW
+      --------------------------------------------- */
+
       setImagePreview(
         getImageUrl(uploadedUrl)
       );
@@ -373,7 +393,10 @@ export default function AdminDashboard({
         "Image uploaded. Save the product to publish it."
       );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "IMAGE UPLOAD ERROR:",
+        error
+      );
 
       setMessage(
         error.message ||
@@ -384,9 +407,10 @@ export default function AdminDashboard({
     }
   };
 
-  /*
-   * Add / update product
-   */
+  /* --------------------------------------------------
+     ADD / UPDATE PRODUCT
+  -------------------------------------------------- */
+
   const submit = async (e) => {
     e.preventDefault();
 
@@ -410,10 +434,15 @@ export default function AdminDashboard({
         headers: {
           ...headers,
           "Content-Type":
-            "application/json"
+            "application/json",
         },
 
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          ...form,
+          price: Number(form.price),
+          stock: Number(form.stock),
+          rating: Number(form.rating),
+        }),
       });
 
       const d = await r.json();
@@ -426,7 +455,7 @@ export default function AdminDashboard({
       }
 
       setForm({
-        ...blank
+        ...blank,
       });
 
       setImagePreview("");
@@ -443,7 +472,10 @@ export default function AdminDashboard({
 
       onProductsChange?.();
     } catch (error) {
-      console.error(error);
+      console.error(
+        "PRODUCT SAVE ERROR:",
+        error
+      );
 
       setMessage(
         error.message ||
@@ -454,17 +486,23 @@ export default function AdminDashboard({
     }
   };
 
-  /*
-   * Edit product
-   */
+  /* --------------------------------------------------
+     EDIT PRODUCT
+  -------------------------------------------------- */
+
   const edit = (product) => {
     setEditingId(product.id);
 
     setForm({
-      ...product,
-      price: product.price,
-      stock: product.stock,
-      rating: product.rating
+      name: product.name || "",
+      price: product.price ?? "",
+      category:
+        product.category || "Flowers",
+      image: product.image || "",
+      description:
+        product.description || "",
+      stock: product.stock ?? 0,
+      rating: product.rating ?? 5,
     });
 
     setImagePreview(
@@ -475,13 +513,14 @@ export default function AdminDashboard({
 
     window.scrollTo({
       top: 0,
-      behavior: "smooth"
+      behavior: "smooth",
     });
   };
 
-  /*
-   * Remove product
-   */
+  /* --------------------------------------------------
+     REMOVE PRODUCT
+  -------------------------------------------------- */
+
   const remove = async (product) => {
     if (
       !window.confirm(
@@ -498,7 +537,7 @@ export default function AdminDashboard({
         ),
         {
           method: "DELETE",
-          headers
+          headers,
         }
       );
 
@@ -509,14 +548,9 @@ export default function AdminDashboard({
           d.message ||
             "Could not remove product."
         );
-
         return;
       }
 
-      /*
-       * If the removed product is currently
-       * being edited, clear the editor.
-       */
       if (
         Number(editingId) ===
         Number(product.id)
@@ -524,7 +558,7 @@ export default function AdminDashboard({
         setEditingId(null);
 
         setForm({
-          ...blank
+          ...blank,
         });
 
         setImagePreview("");
@@ -538,7 +572,10 @@ export default function AdminDashboard({
 
       onProductsChange?.();
     } catch (error) {
-      console.error(error);
+      console.error(
+        "REMOVE PRODUCT ERROR:",
+        error
+      );
 
       setMessage(
         "Could not remove product."
@@ -546,9 +583,10 @@ export default function AdminDashboard({
     }
   };
 
-  /*
-   * Update order/custom order status
-   */
+  /* --------------------------------------------------
+     UPDATE ORDER / CUSTOM ORDER STATUS
+  -------------------------------------------------- */
+
   const updateStatus = async (
     type,
     id,
@@ -570,12 +608,12 @@ export default function AdminDashboard({
         headers: {
           ...headers,
           "Content-Type":
-            "application/json"
+            "application/json",
         },
 
         body: JSON.stringify({
-          status
-        })
+          status,
+        }),
       });
 
       const d = await r.json();
@@ -585,7 +623,6 @@ export default function AdminDashboard({
           d.message ||
             "Could not update status."
         );
-
         return;
       }
 
@@ -594,11 +631,10 @@ export default function AdminDashboard({
 
         orders:
           type === "order"
-            ? current.orders.map(
-                (o) =>
-                  o.id === id
-                    ? d.order
-                    : o
+            ? current.orders.map((o) =>
+                o.id === id
+                  ? d.order
+                  : o
               )
             : current.orders,
 
@@ -610,14 +646,17 @@ export default function AdminDashboard({
                     ? d.order
                     : o
               )
-            : current.customOrders
+            : current.customOrders,
       }));
 
       setMessage(
         `${id} updated to ${status}.`
       );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "STATUS UPDATE ERROR:",
+        error
+      );
 
       setMessage(
         "Could not update status."
@@ -625,9 +664,10 @@ export default function AdminDashboard({
     }
   };
 
-  /*
-   * Update user role
-   */
+  /* --------------------------------------------------
+     UPDATE USER ROLE
+  -------------------------------------------------- */
+
   const updateRole = async (
     user,
     role
@@ -661,12 +701,12 @@ export default function AdminDashboard({
           headers: {
             ...headers,
             "Content-Type":
-              "application/json"
+              "application/json",
           },
 
           body: JSON.stringify({
-            role
-          })
+            role,
+          }),
         }
       );
 
@@ -677,7 +717,6 @@ export default function AdminDashboard({
           d.message ||
             "Could not update role."
         );
-
         return;
       }
 
@@ -690,17 +729,20 @@ export default function AdminDashboard({
               ? {
                   ...u,
                   role:
-                    d.user.role
+                    d.user.role,
                 }
               : u
-        )
+        ),
       }));
 
       setMessage(
         `${user.name}'s role is now ${role}.`
       );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "ROLE UPDATE ERROR:",
+        error
+      );
 
       setMessage(
         "Could not update role."
@@ -708,9 +750,10 @@ export default function AdminDashboard({
     }
   };
 
-  /*
-   * Dashboard calculations
-   */
+  /* --------------------------------------------------
+     CALCULATIONS
+  -------------------------------------------------- */
+
   const revenue = useMemo(
     () =>
       data.orders
@@ -735,7 +778,7 @@ export default function AdminDashboard({
       (o) =>
         ![
           "Completed",
-          "Cancelled"
+          "Cancelled",
         ].includes(
           o.status || "Placed"
         )
@@ -746,7 +789,7 @@ export default function AdminDashboard({
       (o) =>
         ![
           "Completed",
-          "Cancelled"
+          "Cancelled",
         ].includes(
           o.status ||
             "Submitted"
@@ -756,7 +799,7 @@ export default function AdminDashboard({
   const filteredOrders =
     data.orders.filter((o) =>
       `${o.id} ${
-        o.email
+        o.email || ""
       } ${
         o.customer?.name || ""
       } ${
@@ -783,24 +826,29 @@ export default function AdminDashboard({
         )
     );
 
-  /*
-   * Copy order details
-   */
+  /* --------------------------------------------------
+     COPY ORDER
+  -------------------------------------------------- */
+
   const copyOrder = (o) => {
     const text = [
       `Naynaknots Order ${o.id}`,
+
       `Customer: ${
         o.customer?.name ||
         o.email
       }`,
+
       `Phone: ${
         o.customer?.phone ||
         "—"
       }`,
+
       `Address: ${
         o.customer?.address ||
         "—"
       }`,
+
       `Items: ${
         (o.items || [])
           .map(
@@ -809,8 +857,10 @@ export default function AdminDashboard({
           )
           .join(", ")
       }`,
+
       `Total: ₹${o.total}`,
-      `Status: ${o.status}`
+
+      `Status: ${o.status}`,
     ].join("\n");
 
     navigator.clipboard
@@ -822,22 +872,31 @@ export default function AdminDashboard({
       );
   };
 
-  /*
-   * Remove currently selected image
-   */
+  /* --------------------------------------------------
+     REMOVE CURRENT IMAGE
+  -------------------------------------------------- */
+
   const removeImage = () => {
     update("image", "");
-
     setImagePreview("");
-
     setMessage("");
   };
+
+  /* --------------------------------------------------
+     RENDER
+  -------------------------------------------------- */
 
   return (
     <main className="page admin-page">
 
+      {/* ==============================================
+          HEADER
+      ============================================== */}
+
       <div className="admin-top">
+
         <div className="heading">
+
           <span className="eyebrow">
             ADMIN CONTROL CENTER
           </span>
@@ -852,40 +911,29 @@ export default function AdminDashboard({
             ideas — organized in one
             focused workspace.
           </p>
+
         </div>
 
         <div className="admin-live">
           <span></span>
           Live store
         </div>
+
       </div>
 
+      {/* ==============================================
+          TABS
+      ============================================== */}
+
       <nav className="admin-tabs">
+
         {[
-          [
-            "overview",
-            "Overview"
-          ],
-          [
-            "products",
-            "Products"
-          ],
-          [
-            "orders",
-            "Orders"
-          ],
-          [
-            "custom",
-            "Custom orders"
-          ],
-          [
-            "customers",
-            "Customers"
-          ],
-          [
-            "messages",
-            "Messages"
-          ]
+          ["overview", "Overview"],
+          ["products", "Products"],
+          ["orders", "Orders"],
+          ["custom", "Custom orders"],
+          ["customers", "Customers"],
+          ["messages", "Messages"],
         ].map(
           ([id, label]) => (
             <button
@@ -903,7 +951,12 @@ export default function AdminDashboard({
             </button>
           )
         )}
+
       </nav>
+
+      {/* ==============================================
+          MESSAGE
+      ============================================== */}
 
       {message && (
         <div className="admin-message">
@@ -911,13 +964,15 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/*
-       * OVERVIEW
-       */}
+      {/* ==============================================
+          OVERVIEW
+      ============================================== */}
+
       {tab === "overview" && (
         <section className="admin-dashboard-view">
 
           <div className="stats">
+
             <div>
               <b>
                 {data.products.length}
@@ -963,6 +1018,7 @@ export default function AdminDashboard({
                 Order value
               </span>
             </div>
+
           </div>
 
           <div className="admin-overview-grid">
@@ -970,7 +1026,9 @@ export default function AdminDashboard({
             <section className="admin-overview-card">
 
               <div className="admin-section-title">
+
                 <div>
+
                   <span className="eyebrow">
                     NEEDS ATTENTION
                   </span>
@@ -978,7 +1036,9 @@ export default function AdminDashboard({
                   <h2>
                     Work queue
                   </h2>
+
                 </div>
+
               </div>
 
               <div className="queue-grid">
@@ -1063,6 +1123,7 @@ export default function AdminDashboard({
                 </button>
 
               </div>
+
             </section>
 
             <section className="admin-overview-card">
@@ -1070,6 +1131,7 @@ export default function AdminDashboard({
               <div className="admin-section-title">
 
                 <div>
+
                   <span className="eyebrow">
                     RECENT
                   </span>
@@ -1077,6 +1139,7 @@ export default function AdminDashboard({
                   <h2>
                     Latest orders
                   </h2>
+
                 </div>
 
                 <button
@@ -1098,6 +1161,7 @@ export default function AdminDashboard({
                     className="admin-mini-row"
                     key={o.id}
                   >
+
                     <b>
                       {o.id}
                     </b>
@@ -1113,6 +1177,7 @@ export default function AdminDashboard({
                     <em>
                       {o.status}
                     </em>
+
                   </div>
                 ))}
 
@@ -1125,12 +1190,14 @@ export default function AdminDashboard({
             </section>
 
           </div>
+
         </section>
       )}
 
-      {/*
-       * PRODUCTS
-       */}
+      {/* ==============================================
+          PRODUCTS
+      ============================================== */}
+
       {tab === "products" && (
         <section>
 
@@ -1139,6 +1206,7 @@ export default function AdminDashboard({
             <div className="admin-section-title">
 
               <div>
+
                 <span className="eyebrow">
                   PRODUCT MANAGEMENT
                 </span>
@@ -1148,6 +1216,7 @@ export default function AdminDashboard({
                     ? "Edit product"
                     : "Add a product"}
                 </h2>
+
               </div>
 
               {editingId && (
@@ -1156,10 +1225,13 @@ export default function AdminDashboard({
                   type="button"
                   onClick={() => {
                     setEditingId(null);
+
                     setForm({
-                      ...blank
+                      ...blank,
                     });
+
                     setImagePreview("");
+
                     setMessage("");
                   }}
                 >
@@ -1174,7 +1246,10 @@ export default function AdminDashboard({
               onSubmit={submit}
             >
 
+              {/* PRODUCT NAME */}
+
               <label>
+
                 Product name
 
                 <input
@@ -1187,9 +1262,13 @@ export default function AdminDashboard({
                   }
                   required
                 />
+
               </label>
 
+              {/* PRICE */}
+
               <label>
+
                 Price (₹)
 
                 <input
@@ -1204,9 +1283,13 @@ export default function AdminDashboard({
                   }
                   required
                 />
+
               </label>
 
+              {/* CATEGORY */}
+
               <label>
+
                 Category
 
                 <select
@@ -1218,29 +1301,35 @@ export default function AdminDashboard({
                     )
                   }
                 >
-                  <option>
+
+                  <option value="Flowers">
                     Flowers
                   </option>
 
-                  <option>
+                  <option value="Plushies">
                     Plushies
                   </option>
 
-                  <option>
+                  <option value="KeyChain">
                     KeyChain
                   </option>
 
-                  <option>
+                  <option value="Bouquets">
                     Bouquets
                   </option>
 
-                  <option>
+                  <option value="Custom">
                     Custom
                   </option>
+
                 </select>
+
               </label>
 
+              {/* STOCK */}
+
               <label>
+
                 Stock
 
                 <input
@@ -1254,9 +1343,13 @@ export default function AdminDashboard({
                     )
                   }
                 />
+
               </label>
 
+              {/* RATING */}
+
               <label>
+
                 Rating
 
                 <input
@@ -1272,7 +1365,12 @@ export default function AdminDashboard({
                     )
                   }
                 />
+
               </label>
+
+              {/* ======================================
+                  IMAGE
+              ====================================== */}
 
               <label className="image-upload-field">
 
@@ -1286,8 +1384,7 @@ export default function AdminDashboard({
                     disabled={uploading}
                     onChange={(e) =>
                       uploadImage(
-                        e.target
-                          .files?.[0]
+                        e.target.files?.[0]
                       )
                     }
                   />
@@ -1305,14 +1402,8 @@ export default function AdminDashboard({
 
                 </div>
 
-                {/*
-                 * IMAGE PREVIEW
-                 *
-                 * Important:
-                 * getImageUrl() converts
-                 * /uploads/... into the
-                 * backend URL.
-                 */}
+                {/* IMAGE PREVIEW */}
+
                 {(imagePreview ||
                   form.image) && (
                   <div className="image-upload-preview">
@@ -1321,8 +1412,7 @@ export default function AdminDashboard({
                       style={{
                         width: "80px",
                         height: "80px",
-                        borderRadius:
-                          "10px",
+                        borderRadius: "10px",
                         overflow: "hidden",
                         border:
                           "1px solid #ddd",
@@ -1332,16 +1422,15 @@ export default function AdminDashboard({
                         alignItems:
                           "center",
                         justifyContent:
-                          "center"
+                          "center",
                       }}
                     >
+
                       <img
-                        src={
-                          getImageUrl(
-                            imagePreview ||
-                              form.image
-                          )
-                        }
+                        src={getImageUrl(
+                          imagePreview ||
+                            form.image
+                        )}
                         alt="Product preview"
                         style={{
                           width: "100%",
@@ -1349,18 +1438,27 @@ export default function AdminDashboard({
                           objectFit:
                             "cover",
                           display:
-                            "block"
+                            "block",
                         }}
+
+                        /*
+                          IMPORTANT:
+
+                          Do NOT hide the image
+                          automatically.
+
+                          If it fails, show the
+                          real URL in console.
+                        */
+
                         onError={(e) => {
-                          /*
-                           * Hide broken image
-                           * instead of showing
-                           * "Product preview".
-                           */
-                          e.currentTarget.style.display =
-                            "none";
+                          console.error(
+                            "❌ PRODUCT IMAGE FAILED:",
+                            e.currentTarget.src
+                          );
                         }}
                       />
+
                     </div>
 
                     <button
@@ -1375,6 +1473,8 @@ export default function AdminDashboard({
 
                   </div>
                 )}
+
+                {/* MANUAL IMAGE URL */}
 
                 <input
                   value={form.image}
@@ -1396,6 +1496,8 @@ export default function AdminDashboard({
 
               </label>
 
+              {/* DESCRIPTION */}
+
               <label className="full-field">
 
                 Description
@@ -1415,6 +1517,8 @@ export default function AdminDashboard({
 
               </label>
 
+              {/* SAVE */}
+
               <button
                 className="btn primary"
                 disabled={
@@ -1433,11 +1537,16 @@ export default function AdminDashboard({
 
           </section>
 
+          {/* ==========================================
+              PRODUCT LIST
+          ========================================== */}
+
           <section className="admin-product-list">
 
             <div className="admin-section-title">
 
               <div>
+
                 <span className="eyebrow">
                   YOUR CATALOGUE
                 </span>
@@ -1445,6 +1554,7 @@ export default function AdminDashboard({
                 <h2>
                   Products
                 </h2>
+
               </div>
 
             </div>
@@ -1465,9 +1575,12 @@ export default function AdminDashboard({
                       alt={
                         product.name
                       }
+
                       onError={(e) => {
-                        e.currentTarget.style.display =
-                          "none";
+                        console.error(
+                          "❌ PRODUCT LIST IMAGE FAILED:",
+                          e.currentTarget.src
+                        );
                       }}
                     />
 
@@ -1535,15 +1648,17 @@ export default function AdminDashboard({
         </section>
       )}
 
-      {/*
-       * ORDERS
-       */}
+      {/* ==============================================
+          ORDERS
+      ============================================== */}
+
       {tab === "orders" && (
         <section className="admin-work-panel">
 
           <div className="admin-section-title">
 
             <div>
+
               <span className="eyebrow">
                 ORDER MANAGEMENT
               </span>
@@ -1551,6 +1666,7 @@ export default function AdminDashboard({
               <h2>
                 Customer orders
               </h2>
+
             </div>
 
             <span className="admin-count">
@@ -1588,6 +1704,7 @@ export default function AdminDashboard({
                     <div className="order-main">
 
                       <div>
+
                         <b>
                           {o.id}
                         </b>
@@ -1597,6 +1714,7 @@ export default function AdminDashboard({
                             o.createdAt
                           ).toLocaleString()}
                         </span>
+
                       </div>
 
                       <strong>
@@ -1629,8 +1747,8 @@ export default function AdminDashboard({
                       </small>
 
                       <small>
-                        {o.items
-                          ?.map(
+                        {(o.items || [])
+                          .map(
                             (i) =>
                               `${i.name} × ${i.qty}`
                           )
@@ -1654,6 +1772,7 @@ export default function AdminDashboard({
                       </button>
 
                       <label>
+
                         Status
 
                         <select
@@ -1665,24 +1784,26 @@ export default function AdminDashboard({
                             updateStatus(
                               "order",
                               o.id,
-                              e.target
-                                .value
+                              e.target.value
                             )
                           }
                         >
+
                           {orderStatuses.map(
                             (status) => (
                               <option
                                 key={
                                   status
                                 }
-                              >
-                                {
+                                value={
                                   status
                                 }
+                              >
+                                {status}
                               </option>
                             )
                           )}
+
                         </select>
 
                       </label>
@@ -1702,15 +1823,17 @@ export default function AdminDashboard({
         </section>
       )}
 
-      {/*
-       * CUSTOM ORDERS
-       */}
+      {/* ==============================================
+          CUSTOM ORDERS
+      ============================================== */}
+
       {tab === "custom" && (
         <section className="admin-work-panel">
 
           <div className="admin-section-title">
 
             <div>
+
               <span className="eyebrow">
                 KNOT STUDIO
               </span>
@@ -1718,6 +1841,7 @@ export default function AdminDashboard({
               <h2>
                 Custom orders
               </h2>
+
             </div>
 
             <span className="admin-count">
@@ -1745,6 +1869,7 @@ export default function AdminDashboard({
                     <div className="custom-head">
 
                       <div>
+
                         <b>
                           {o.id}
                         </b>
@@ -1755,6 +1880,7 @@ export default function AdminDashboard({
                             o.createdAt
                           ).toLocaleDateString()}
                         </span>
+
                       </div>
 
                       <strong>
@@ -1812,6 +1938,7 @@ export default function AdminDashboard({
                     </div>
 
                     <label>
+
                       Status
 
                       <select
@@ -1823,24 +1950,26 @@ export default function AdminDashboard({
                           updateStatus(
                             "custom",
                             o.id,
-                            e.target
-                              .value
+                            e.target.value
                           )
                         }
                       >
+
                         {customStatuses.map(
                           (status) => (
                             <option
                               key={
                                 status
                               }
-                            >
-                              {
+                              value={
                                 status
                               }
+                            >
+                              {status}
                             </option>
                           )
                         )}
+
                       </select>
 
                     </label>
@@ -1858,15 +1987,17 @@ export default function AdminDashboard({
         </section>
       )}
 
-      {/*
-       * CUSTOMERS
-       */}
+      {/* ==============================================
+          CUSTOMERS
+      ============================================== */}
+
       {tab === "customers" && (
         <section className="admin-work-panel">
 
           <div className="admin-section-title">
 
             <div>
+
               <span className="eyebrow">
                 CUSTOMER MANAGEMENT
               </span>
@@ -1874,6 +2005,7 @@ export default function AdminDashboard({
               <h2>
                 Accounts
               </h2>
+
             </div>
 
             <span className="admin-count">
@@ -1898,6 +2030,7 @@ export default function AdminDashboard({
                   </div>
 
                   <div>
+
                     <b>
                       {user.name}
                     </b>
@@ -1905,9 +2038,11 @@ export default function AdminDashboard({
                     <span>
                       {user.email}
                     </span>
+
                   </div>
 
                   <label>
+
                     Role
 
                     <select
@@ -1921,6 +2056,7 @@ export default function AdminDashboard({
                         )
                       }
                     >
+
                       <option value="customer">
                         Customer
                       </option>
@@ -1928,6 +2064,7 @@ export default function AdminDashboard({
                       <option value="admin">
                         Admin
                       </option>
+
                     </select>
 
                   </label>
@@ -1949,15 +2086,17 @@ export default function AdminDashboard({
         </section>
       )}
 
-      {/*
-       * MESSAGES
-       */}
+      {/* ==============================================
+          MESSAGES
+      ============================================== */}
+
       {tab === "messages" && (
         <section className="admin-work-panel">
 
           <div className="admin-section-title">
 
             <div>
+
               <span className="eyebrow">
                 INBOX
               </span>
@@ -1965,6 +2104,7 @@ export default function AdminDashboard({
               <h2>
                 Contact messages
               </h2>
+
             </div>
 
             <span className="admin-count">

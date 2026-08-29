@@ -94,7 +94,9 @@ function signToken(user) {
     JSON.stringify({
       id: user.id,
       role: user.role,
-      exp: Date.now() + 7 * 24 * 60 * 60 * 1000
+      exp:
+        Date.now() +
+        7 * 24 * 60 * 60 * 1000
     })
   ).toString("base64url");
 
@@ -129,10 +131,16 @@ function verifyToken(token) {
     }
 
     const data = JSON.parse(
-      Buffer.from(payload, "base64url").toString("utf8")
+      Buffer.from(
+        payload,
+        "base64url"
+      ).toString("utf8")
     );
 
-    if (!data.exp || Date.now() > data.exp) {
+    if (
+      !data.exp ||
+      Date.now() > data.exp
+    ) {
       return null;
     }
 
@@ -146,9 +154,10 @@ async function authUser(req) {
   const authorization =
     req.headers.authorization || "";
 
-  const token = authorization.startsWith("Bearer ")
-    ? authorization.slice(7)
-    : "";
+  const token =
+    authorization.startsWith("Bearer ")
+      ? authorization.slice(7)
+      : "";
 
   const claims = verifyToken(token);
 
@@ -159,9 +168,14 @@ async function authUser(req) {
   });
 }
 
-async function requireUser(req, res, next) {
+async function requireUser(
+  req,
+  res,
+  next
+) {
   try {
-    const user = await authUser(req);
+    const user =
+      await authUser(req);
 
     if (!user) {
       return res.status(401).json({
@@ -170,49 +184,79 @@ async function requireUser(req, res, next) {
     }
 
     req.user = user;
+
     next();
   } catch (error) {
     console.error(error);
+
     res.status(500).json({
-      message: "Authentication failed."
+      message:
+        "Authentication failed."
     });
   }
 }
 
-async function requireAdmin(req, res, next) {
+async function requireAdmin(
+  req,
+  res,
+  next
+) {
   try {
-    const user = await authUser(req);
+    const user =
+      await authUser(req);
 
-    if (!user || user.role !== "admin") {
+    if (
+      !user ||
+      user.role !== "admin"
+    ) {
       return res.status(403).json({
-        message: "Admin permission required."
+        message:
+          "Admin permission required."
       });
     }
 
     req.user = user;
     req.admin = user;
+
     next();
   } catch (error) {
     console.error(error);
+
     res.status(500).json({
-      message: "Authentication failed."
+      message:
+        "Authentication failed."
     });
   }
 }
 
-function rateLimit(limit, windowMs) {
+function rateLimit(
+  limit,
+  windowMs
+) {
   const buckets = new Map();
 
-  return (req, res, next) => {
-    const key = `${req.ip}:${req.path}`;
-    const now = Date.now();
-    const row = buckets.get(key);
+  return (
+    req,
+    res,
+    next
+  ) => {
+    const key =
+      `${req.ip}:${req.path}`;
 
-    if (!row || now - row.start > windowMs) {
+    const now = Date.now();
+
+    const row =
+      buckets.get(key);
+
+    if (
+      !row ||
+      now - row.start > windowMs
+    ) {
       buckets.set(key, {
         start: now,
         count: 1
       });
+
       return next();
     }
 
@@ -244,76 +288,131 @@ app.use(
   })
 );
 
-app.disable("x-powered-by");
+app.disable(
+  "x-powered-by"
+);
 
-app.use((req, res, next) => {
-  res.setHeader(
-    "X-Content-Type-Options",
-    "nosniff"
-  );
-  res.setHeader(
-    "X-Frame-Options",
-    "DENY"
-  );
-  res.setHeader(
-    "Referrer-Policy",
-    "strict-origin-when-cross-origin"
-  );
-  next();
-});
+app.use(
+  (req, res, next) => {
+    res.setHeader(
+      "X-Content-Type-Options",
+      "nosniff"
+    );
 
-app.get("/api/health", (_, res) => {
-  res.json({
-    ok: true,
-    service: "naynaknots-api",
-    database: "mongodb",
-    time: new Date().toISOString()
-  });
-});
+    res.setHeader(
+      "X-Frame-Options",
+      "DENY"
+    );
 
-app.get("/api/store-config", (_, res) => {
-  res.json({
-    instagram: "naynaknots",
-    whatsapp: "916352198619",
-    storeName: "Naynaknots",
-    supportEmail: "meetpatelr1801@gmail.com"
-  });
-});
+    res.setHeader(
+      "Referrer-Policy",
+      "strict-origin-when-cross-origin"
+    );
 
-app.get("/api/products", async (_, res) => {
-  try {
-    const list = await products()
-      .find({})
-      .sort({ id: 1 })
-      .toArray();
+    next();
+  }
+);
 
-    res.json(list);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Unable to load products."
+// --------------------------------------------------
+// HEALTH
+// --------------------------------------------------
+
+app.get(
+  "/api/health",
+  (_, res) => {
+    res.json({
+      ok: true,
+      service:
+        "naynaknots-api",
+      database: "mongodb",
+      time:
+        new Date().toISOString()
     });
   }
-});
+);
+
+// --------------------------------------------------
+// STORE CONFIG
+// --------------------------------------------------
+
+app.get(
+  "/api/store-config",
+  (_, res) => {
+    res.json({
+      instagram:
+        "naynaknots",
+      whatsapp:
+        "916352198619",
+      storeName:
+        "Naynaknots",
+      supportEmail:
+        "meetpatelr1801@gmail.com"
+    });
+  }
+);
+
+// --------------------------------------------------
+// PRODUCTS
+// --------------------------------------------------
+
+app.get(
+  "/api/products",
+  async (_, res) => {
+    try {
+      const list =
+        await products()
+          .find({})
+          .sort({ id: 1 })
+          .toArray();
+
+      res.json(list);
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        message:
+          "Unable to load products."
+      });
+    }
+  }
+);
+
+// --------------------------------------------------
+// REGISTER
+// --------------------------------------------------
 
 app.post(
   "/api/register",
-  rateLimit(10, 15 * 60 * 1000),
+  rateLimit(
+    10,
+    15 * 60 * 1000
+  ),
   async (req, res) => {
     try {
-      const name = String(
-        req.body?.name || ""
-      ).trim();
+      const name =
+        String(
+          req.body?.name ||
+            ""
+        ).trim();
 
-      const email = String(
-        req.body?.email || ""
-      ).trim().toLowerCase();
+      const email =
+        String(
+          req.body?.email ||
+            ""
+        )
+          .trim()
+          .toLowerCase();
 
-      const password = String(
-        req.body?.password || ""
-      );
+      const password =
+        String(
+          req.body?.password ||
+            ""
+        );
 
-      if (name.length < 2 || name.length > 60) {
+      if (
+        name.length < 2 ||
+        name.length > 60
+      ) {
         return res.status(400).json({
           message:
             "Name must be between 2 and 60 characters."
@@ -331,14 +430,20 @@ app.post(
         });
       }
 
-      if (password.length < 8) {
+      if (
+        password.length < 8
+      ) {
         return res.status(400).json({
           message:
             "Password must be at least 8 characters."
         });
       }
 
-      if (await users().findOne({ email })) {
+      if (
+        await users().findOne({
+          email
+        })
+      ) {
         return res.status(409).json({
           message:
             "An account with this email already exists."
@@ -346,49 +451,82 @@ app.post(
       }
 
       const user = {
-        id: crypto.randomUUID(),
+        id:
+          crypto.randomUUID(),
+
         name,
+
         email,
-        ...hashPassword(password),
+
+        ...hashPassword(
+          password
+        ),
+
         role: "customer",
-        createdAt: new Date().toISOString()
+
+        createdAt:
+          new Date().toISOString()
       };
 
-      await users().insertOne(user);
+      await users().insertOne(
+        user
+      );
 
       res.json({
-        user: sanitizeUser(user),
-        token: signToken(user)
+        user:
+          sanitizeUser(user),
+
+        token:
+          signToken(user)
       });
     } catch (error) {
       console.error(error);
+
       res.status(500).json({
-        message: "Registration failed."
+        message:
+          "Registration failed."
       });
     }
   }
 );
 
+// --------------------------------------------------
+// LOGIN
+// --------------------------------------------------
+
 app.post(
   "/api/login",
-  rateLimit(10, 15 * 60 * 1000),
+  rateLimit(
+    10,
+    15 * 60 * 1000
+  ),
   async (req, res) => {
     try {
-      const email = String(
-        req.body?.email || ""
-      ).trim().toLowerCase();
+      const email =
+        String(
+          req.body?.email ||
+            ""
+        )
+          .trim()
+          .toLowerCase();
 
-      const password = String(
-        req.body?.password || ""
-      );
+      const password =
+        String(
+          req.body?.password ||
+            ""
+        );
 
-      const user = await users().findOne({
-        email
-      });
+      const user =
+        await users().findOne({
+          email
+        });
 
       if (
         !user ||
-        !passwordMatches(password, user)
+        !passwordMatches(
+          password,
+          user
+        )
       ) {
         return res.status(401).json({
           message:
@@ -397,34 +535,59 @@ app.post(
       }
 
       res.json({
-        user: sanitizeUser(user),
-        token: signToken(user)
+        user:
+          sanitizeUser(user),
+
+        token:
+          signToken(user)
       });
     } catch (error) {
       console.error(error);
+
       res.status(500).json({
-        message: "Login failed."
+        message:
+          "Login failed."
       });
     }
   }
 );
 
-app.get("/api/me", requireUser, (req, res) => {
-  res.json({
-    user: sanitizeUser(req.user)
-  });
-});
+// --------------------------------------------------
+// CURRENT USER
+// --------------------------------------------------
+
+app.get(
+  "/api/me",
+  requireUser,
+  (req, res) => {
+    res.json({
+      user:
+        sanitizeUser(
+          req.user
+        )
+    });
+  }
+);
+
+// --------------------------------------------------
+// UPDATE PROFILE
+// --------------------------------------------------
 
 app.patch(
   "/api/my/profile",
   requireUser,
   async (req, res) => {
     try {
-      const name = String(
-        req.body?.name || ""
-      ).trim();
+      const name =
+        String(
+          req.body?.name ||
+            ""
+        ).trim();
 
-      if (name.length < 2 || name.length > 60) {
+      if (
+        name.length < 2 ||
+        name.length > 60
+      ) {
         return res.status(400).json({
           message:
             "Name must be between 2 and 60 characters."
@@ -432,19 +595,30 @@ app.patch(
       }
 
       await users().updateOne(
-        { id: req.user.id },
-        { $set: { name } }
+        {
+          id: req.user.id
+        },
+        {
+          $set: {
+            name
+          }
+        }
       );
 
-      const updated = await users().findOne({
-        id: req.user.id
-      });
+      const updated =
+        await users().findOne({
+          id: req.user.id
+        });
 
       res.json({
-        user: sanitizeUser(updated)
+        user:
+          sanitizeUser(
+            updated
+          )
       });
     } catch (error) {
       console.error(error);
+
       res.status(500).json({
         message:
           "Unable to update profile."
@@ -453,6 +627,10 @@ app.patch(
   }
 );
 
+// --------------------------------------------------
+// MY WISHLIST
+// --------------------------------------------------
+
 app.get(
   "/api/my/wishlist",
   requireUser,
@@ -460,14 +638,17 @@ app.get(
     try {
       const wishlist =
         await wishlists().findOne({
-          userId: req.user.id
+          userId:
+            req.user.id
         });
 
       res.json(
-        wishlist?.productIds || []
+        wishlist?.productIds ||
+          []
       );
     } catch (error) {
       console.error(error);
+
       res.status(500).json({
         message:
           "Unable to load wishlist."
@@ -481,39 +662,52 @@ app.post(
   requireUser,
   async (req, res) => {
     try {
-      const id = Number(
-        req.params.productId
-      );
+      const id =
+        Number(
+          req.params.productId
+        );
 
       if (
-        !(await products().findOne({ id }))
+        !(await products().findOne({
+          id
+        }))
       ) {
         return res.status(404).json({
-          message: "Product not found."
+          message:
+            "Product not found."
         });
       }
 
       await wishlists().updateOne(
-        { userId: req.user.id },
+        {
+          userId:
+            req.user.id
+        },
         {
           $addToSet: {
-            productIds: id
+            productIds:
+              id
           }
         },
-        { upsert: true }
+        {
+          upsert: true
+        }
       );
 
       const wishlist =
         await wishlists().findOne({
-          userId: req.user.id
+          userId:
+            req.user.id
         });
 
       res.json({
         productIds:
-          wishlist?.productIds || []
+          wishlist?.productIds ||
+          []
       });
     } catch (error) {
       console.error(error);
+
       res.status(500).json({
         message:
           "Unable to update wishlist."
@@ -527,30 +721,38 @@ app.delete(
   requireUser,
   async (req, res) => {
     try {
-      const id = Number(
-        req.params.productId
-      );
+      const id =
+        Number(
+          req.params.productId
+        );
 
       await wishlists().updateOne(
-        { userId: req.user.id },
+        {
+          userId:
+            req.user.id
+        },
         {
           $pull: {
-            productIds: id
+            productIds:
+              id
           }
         }
       );
 
       const wishlist =
         await wishlists().findOne({
-          userId: req.user.id
+          userId:
+            req.user.id
         });
 
       res.json({
         productIds:
-          wishlist?.productIds || []
+          wishlist?.productIds ||
+          []
       });
     } catch (error) {
       console.error(error);
+
       res.status(500).json({
         message:
           "Unable to update wishlist."
@@ -558,6 +760,7 @@ app.delete(
     }
   }
 );
+
 // --------------------------------------------------
 // MY ORDERS
 // --------------------------------------------------
@@ -567,14 +770,16 @@ app.get(
   requireUser,
   async (req, res) => {
     try {
-      const list = await orders()
-        .find({
-          userId: req.user.id
-        })
-        .sort({
-          createdAt: -1
-        })
-        .toArray();
+      const list =
+        await orders()
+          .find({
+            userId:
+              req.user.id
+          })
+          .sort({
+            createdAt: -1
+          })
+          .toArray();
 
       res.json(list);
     } catch (error) {
@@ -597,14 +802,16 @@ app.get(
   requireUser,
   async (req, res) => {
     try {
-      const list = await customOrders()
-        .find({
-          userId: req.user.id
-        })
-        .sort({
-          createdAt: -1
-        })
-        .toArray();
+      const list =
+        await customOrders()
+          .find({
+            userId:
+              req.user.id
+          })
+          .sort({
+            createdAt: -1
+          })
+          .toArray();
 
       res.json(list);
     } catch (error) {
@@ -617,7 +824,6 @@ app.get(
     }
   }
 );
-
 // --------------------------------------------------
 // CREATE ORDER
 // --------------------------------------------------
@@ -664,6 +870,7 @@ app.post(
 
       const safeItems = [];
 
+      // Verify every product and stock
       for (const item of items) {
         const productId =
           Number(item.id);
@@ -672,6 +879,17 @@ app.post(
           Math.floor(
             Number(item.qty)
           );
+
+        if (
+          !Number.isInteger(
+            productId
+          )
+        ) {
+          return res.status(400).json({
+            message:
+              "Invalid product."
+          });
+        }
 
         const product =
           await products().findOne({
@@ -708,16 +926,21 @@ app.post(
         }
 
         safeItems.push({
-          id: product.id,
-          name: product.name,
-          price: Number(
-            product.price
-          ),
-          qty: quantity
+          id:
+            product.id,
+
+          name:
+            product.name,
+
+          price:
+            Number(product.price),
+
+          qty:
+            quantity
         });
       }
 
-      // Reduce stock in MongoDB.
+      // Reduce stock safely
       for (const item of safeItems) {
         const result =
           await products().updateOne(
@@ -729,7 +952,8 @@ app.post(
             },
             {
               $inc: {
-                stock: -item.qty
+                stock:
+                  -item.qty
               }
             }
           );
@@ -754,12 +978,14 @@ app.post(
         );
 
       const order = {
-        id: makeId("ORD"),
+        id:
+          makeId("ORD"),
 
         createdAt:
           new Date().toISOString(),
 
-        status: "Placed",
+        status:
+          "Placed",
 
         userId:
           req.user.id,
@@ -768,38 +994,45 @@ app.post(
           req.user.email,
 
         customer: {
-          name: String(
-            customer.name
-          )
-            .trim()
-            .slice(0, 80),
+          name:
+            String(
+              customer.name
+            )
+              .trim()
+              .slice(0, 80),
 
-          phone: String(
-            customer.phone
-          )
-            .trim()
-            .slice(0, 30),
+          phone:
+            String(
+              customer.phone
+            )
+              .trim()
+              .slice(0, 30),
 
-          city: String(
-            customer.city
-          )
-            .trim()
-            .slice(0, 80),
+          city:
+            String(
+              customer.city
+            )
+              .trim()
+              .slice(0, 80),
 
-          address: String(
-            customer.address
-          )
-            .trim()
-            .slice(0, 250),
+          address:
+            String(
+              customer.address
+            )
+              .trim()
+              .slice(0, 250),
 
-          note: String(
-            customer.note || ""
-          )
-            .trim()
-            .slice(0, 300)
+          note:
+            String(
+              customer.note ||
+                ""
+            )
+              .trim()
+              .slice(0, 300)
         },
 
-        items: safeItems,
+        items:
+          safeItems,
 
         total
       };
@@ -812,7 +1045,10 @@ app.post(
         order
       });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "❌ CREATE ORDER ERROR:",
+        error
+      );
 
       res.status(500).json({
         message:
@@ -821,6 +1057,7 @@ app.post(
     }
   }
 );
+
 
 // --------------------------------------------------
 // CREATE CUSTOM ORDER
@@ -832,7 +1069,8 @@ app.post(
   async (req, res) => {
     try {
       const order = {
-        id: makeId("CUS"),
+        id:
+          makeId("CUS"),
 
         createdAt:
           new Date().toISOString(),
@@ -846,25 +1084,40 @@ app.post(
         email:
           req.user.email,
 
-        type: String(
-          req.body?.type || ""
-        ).slice(0, 60),
+        type:
+          String(
+            req.body?.type || ""
+          )
+            .trim()
+            .slice(0, 60),
 
-        color: String(
-          req.body?.color || ""
-        ).slice(0, 60),
+        color:
+          String(
+            req.body?.color || ""
+          )
+            .trim()
+            .slice(0, 60),
 
-        size: String(
-          req.body?.size || ""
-        ).slice(0, 60),
+        size:
+          String(
+            req.body?.size || ""
+          )
+            .trim()
+            .slice(0, 60),
 
-        occasion: String(
-          req.body?.occasion || ""
-        ).slice(0, 80),
+        occasion:
+          String(
+            req.body?.occasion || ""
+          )
+            .trim()
+            .slice(0, 80),
 
-        idea: String(
-          req.body?.idea || ""
-        ).slice(0, 800),
+        idea:
+          String(
+            req.body?.idea || ""
+          )
+            .trim()
+            .slice(0, 800),
 
         price:
           Number(
@@ -881,7 +1134,10 @@ app.post(
         order
       });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "❌ CUSTOM ORDER ERROR:",
+        error
+      );
 
       res.status(500).json({
         message:
@@ -891,6 +1147,7 @@ app.post(
   }
 );
 
+
 // --------------------------------------------------
 // CONTACT
 // --------------------------------------------------
@@ -899,20 +1156,48 @@ app.post(
   "/api/contact",
   async (req, res) => {
     try {
-      const message = {
-        id: makeId("MSG"),
-
-        name: String(
+      const name =
+        String(
           req.body?.name || ""
-        ).slice(0, 80),
+        )
+          .trim()
+          .slice(0, 80);
 
-        email: String(
+      const email =
+        String(
           req.body?.email || ""
-        ).slice(0, 120),
+        )
+          .trim()
+          .slice(0, 120);
 
-        message: String(
+      const messageText =
+        String(
           req.body?.message || ""
-        ).slice(0, 1500),
+        )
+          .trim()
+          .slice(0, 1500);
+
+      if (
+        !name ||
+        !email ||
+        !messageText
+      ) {
+        return res.status(400).json({
+          message:
+            "Name, email and message are required."
+        });
+      }
+
+      const message = {
+        id:
+          makeId("MSG"),
+
+        name,
+
+        email,
+
+        message:
+          messageText,
 
         createdAt:
           new Date().toISOString()
@@ -926,7 +1211,10 @@ app.post(
         ok: true
       });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "❌ CONTACT ERROR:",
+        error
+      );
 
       res.status(500).json({
         message:
@@ -935,6 +1223,7 @@ app.post(
     }
   }
 );
+
 
 // --------------------------------------------------
 // ADMIN - ALL DATA
@@ -995,18 +1284,29 @@ app.get(
       ]);
 
       res.json({
-        users: allUsers,
-        products: allProducts,
-        orders: allOrders,
+        users:
+          allUsers,
+
+        products:
+          allProducts,
+
+        orders:
+          allOrders,
+
         customOrders:
           allCustomOrders,
+
         messages:
           allMessages,
+
         wishlists:
           allWishlists
       });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "❌ ADMIN DATA ERROR:",
+        error
+      );
 
       res.status(500).json({
         message:
@@ -1015,6 +1315,7 @@ app.get(
     }
   }
 );
+
 
 // --------------------------------------------------
 // ADMIN - ORDER STATUS
@@ -1034,11 +1335,14 @@ app.patch(
         "Cancelled"
       ];
 
-      const status = String(
-        req.body?.status || ""
-      );
+      const status =
+        String(
+          req.body?.status || ""
+        );
 
-      if (!allowed.includes(status)) {
+      if (
+        !allowed.includes(status)
+      ) {
         return res.status(400).json({
           message:
             "Invalid order status."
@@ -1048,7 +1352,8 @@ app.patch(
       const result =
         await orders().findOneAndUpdate(
           {
-            id: req.params.id
+            id:
+              req.params.id
           },
           {
             $set: {
@@ -1069,10 +1374,14 @@ app.patch(
       }
 
       res.json({
-        order: result
+        order:
+          result
       });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "❌ ORDER STATUS ERROR:",
+        error
+      );
 
       res.status(500).json({
         message:
@@ -1081,6 +1390,7 @@ app.patch(
     }
   }
 );
+
 
 // --------------------------------------------------
 // ADMIN - CUSTOM ORDER STATUS
@@ -1101,11 +1411,14 @@ app.patch(
         "Cancelled"
       ];
 
-      const status = String(
-        req.body?.status || ""
-      );
+      const status =
+        String(
+          req.body?.status || ""
+        );
 
-      if (!allowed.includes(status)) {
+      if (
+        !allowed.includes(status)
+      ) {
         return res.status(400).json({
           message:
             "Invalid custom order status."
@@ -1116,7 +1429,8 @@ app.patch(
         await customOrders()
           .findOneAndUpdate(
             {
-              id: req.params.id
+              id:
+                req.params.id
             },
             {
               $set: {
@@ -1137,10 +1451,14 @@ app.patch(
       }
 
       res.json({
-        order: result
+        order:
+          result
       });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "❌ CUSTOM ORDER STATUS ERROR:",
+        error
+      );
 
       res.status(500).json({
         message:
@@ -1149,6 +1467,8 @@ app.patch(
     }
   }
 );
+
+
 // --------------------------------------------------
 // ADMIN - CHANGE USER ROLE
 // --------------------------------------------------
@@ -1158,20 +1478,26 @@ app.patch(
   requireAdmin,
   async (req, res) => {
     try {
-      const role = String(
-        req.body?.role || ""
-      );
+      const role =
+        String(
+          req.body?.role || ""
+        );
 
       if (
-        !["customer", "admin"].includes(role)
+        ![
+          "customer",
+          "admin"
+        ].includes(role)
       ) {
         return res.status(400).json({
-          message: "Invalid role."
+          message:
+            "Invalid role."
         });
       }
 
       if (
-        req.params.id === req.admin.id &&
+        req.params.id ===
+          req.admin.id &&
         role !== "admin"
       ) {
         return res.status(400).json({
@@ -1183,7 +1509,8 @@ app.patch(
       const result =
         await users().findOneAndUpdate(
           {
-            id: req.params.id
+            id:
+              req.params.id
           },
           {
             $set: {
@@ -1191,21 +1518,29 @@ app.patch(
             }
           },
           {
-            returnDocument: "after"
+            returnDocument:
+              "after"
           }
         );
 
       if (!result) {
         return res.status(404).json({
-          message: "User not found."
+          message:
+            "User not found."
         });
       }
 
       res.json({
-        user: sanitizeUser(result)
+        user:
+          sanitizeUser(
+            result
+          )
       });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "❌ USER ROLE ERROR:",
+        error
+      );
 
       res.status(500).json({
         message:
@@ -1214,8 +1549,6 @@ app.patch(
     }
   }
 );
-
-
 // --------------------------------------------------
 // ADMIN - IMAGE UPLOAD
 // PERMANENT MONGODB STORAGE
@@ -1226,94 +1559,15 @@ app.post(
   requireAdmin,
   async (req, res) => {
     try {
-      const { dataUrl } = req.body || {};
+      const {
+        dataUrl
+      } = req.body || {};
 
       if (
         typeof dataUrl !== "string" ||
-        !dataUrl.startsWith("data:image/")
-      ) {
-        return res.status(400).json({
-          message: "Please select a valid image."
-        });
-      }
-
-      const match = dataUrl.match(
-        /^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/
-      );
-
-      if (!match) {
-        return res.status(400).json({
-          message:
-            "Only PNG, JPG or WebP images are supported."
-        });
-      }
-
-      const mimeType =
-        match[1] === "jpg" || match[1] === "jpeg"
-          ? "image/jpeg"
-          : `image/${match[1]}`;
-
-      const buffer = Buffer.from(
-        match[2],
-        "base64"
-      );
-
-      // Maximum 5 MB
-      if (buffer.length > 5 * 1024 * 1024) {
-        return res.status(400).json({
-          message:
-            "Image must be smaller than 5 MB."
-        });
-      }
-
-      // Save image permanently in MongoDB
-      const result = await images().insertOne({
-        data: buffer,
-        contentType: mimeType,
-        size: buffer.length,
-        createdAt: new Date().toISOString()
-      });
-
-      const imageUrl =
-        `/api/images/${result.insertedId.toString()}`;
-
-      console.log(
-        `✅ Image saved permanently: ${result.insertedId}`
-      );
-
-      res.status(201).json({
-        url: imageUrl,
-        imageId: result.insertedId.toString()
-      });
-    } catch (error) {
-      console.error(
-        "❌ IMAGE UPLOAD ERROR:",
-        error
-      );
-
-      res.status(500).json({
-        message:
-          "Unable to upload image."
-      });
-    }
-  }
-);
-
-
-// --------------------------------------------------
-// ADMIN - IMAGE UPLOAD
-// --------------------------------------------------
-
-app.post(
-  "/api/admin/upload-image",
-  requireAdmin,
-  async (req, res) => {
-    try {
-      const { dataUrl } = req.body || {};
-
-      if (
-        typeof dataUrl !== "string" ||
-        !dataUrl.startsWith("data:image/")
+        !dataUrl.startsWith(
+          "data:image/"
+        )
       ) {
         return res.status(400).json({
           message:
@@ -1321,9 +1575,17 @@ app.post(
         });
       }
 
-      const match = dataUrl.match(
-        /^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/
-      );
+      /*
+        Supported formats:
+        PNG
+        JPG / JPEG
+        WebP
+      */
+
+      const match =
+        dataUrl.match(
+          /^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/
+        );
 
       if (!match) {
         return res.status(400).json({
@@ -1333,15 +1595,26 @@ app.post(
       }
 
       const extension =
-        match[1] === "jpeg" ||
-        match[1] === "jpg"
-          ? "jpg"
-          : match[1];
+        match[1];
 
-      const buffer = Buffer.from(
-        match[2],
-        "base64"
-      );
+      const contentType =
+        extension === "jpg" ||
+        extension === "jpeg"
+          ? "image/jpeg"
+          : `image/${extension}`;
+
+      const base64Data =
+        match[2];
+
+      const buffer =
+        Buffer.from(
+          base64Data,
+          "base64"
+        );
+
+      /*
+        Maximum 5 MB.
+      */
 
       if (
         buffer.length >
@@ -1353,31 +1626,177 @@ app.post(
         });
       }
 
-      const filename =
-        `product-${Date.now()}-${crypto.randomUUID()}.${extension}`;
+      /*
+        Save image permanently
+        inside MongoDB.
+      */
 
-      fs.writeFileSync(
-        path.join(
-          uploadsDir,
-          filename
-        ),
-        buffer
+      const result =
+        await images().insertOne({
+          data: buffer,
+
+          contentType,
+
+          size:
+            buffer.length,
+
+          createdAt:
+            new Date().toISOString()
+        });
+
+      const imageId =
+        result.insertedId.toString();
+
+      const imageUrl =
+        `/api/images/${imageId}`;
+
+      console.log(
+        `✅ Image saved permanently: ${imageId}`
       );
 
-      res.status(201).json({
-        url:
-          `/uploads/${filename}`
-      });
-    } catch (error) {
-      console.error(error);
+      return res.status(201).json({
+        ok: true,
 
-      res.status(500).json({
+        url: imageUrl,
+
+        imageId
+      });
+
+    } catch (error) {
+      console.error(
+        "❌ IMAGE UPLOAD ERROR:",
+        error
+      );
+
+      return res.status(500).json({
         message:
           "Unable to upload image."
       });
     }
   }
 );
+
+
+// --------------------------------------------------
+// GET IMAGE FROM MONGODB
+// --------------------------------------------------
+
+app.get(
+  "/api/images/:id",
+  async (req, res) => {
+    try {
+      const imageId =
+        String(
+          req.params.id || ""
+        ).trim();
+
+      /*
+        Validate MongoDB ObjectId.
+      */
+
+      if (
+        !ObjectId.isValid(
+          imageId
+        )
+      ) {
+        return res.status(400).send(
+          "Invalid image ID."
+        );
+      }
+
+      /*
+        Find image in MongoDB.
+      */
+
+      const image =
+        await images().findOne({
+          _id:
+            new ObjectId(
+              imageId
+            )
+        });
+
+      if (
+        !image ||
+        !image.data
+      ) {
+        return res.status(404).send(
+          "Image not found."
+        );
+      }
+
+      let buffer;
+
+      /*
+        MongoDB Binary can be
+        returned in different forms.
+      */
+
+      if (
+        Buffer.isBuffer(
+          image.data
+        )
+      ) {
+        buffer =
+          image.data;
+      } else if (
+        image.data &&
+        image.data.buffer
+      ) {
+        buffer =
+          Buffer.from(
+            image.data.buffer
+          );
+      } else {
+        buffer =
+          Buffer.from(
+            image.data
+          );
+      }
+
+      /*
+        Tell browser the image type.
+      */
+
+      res.setHeader(
+        "Content-Type",
+        image.contentType ||
+          "image/jpeg"
+      );
+
+      res.setHeader(
+        "Content-Length",
+        buffer.length
+      );
+
+      /*
+        Images are permanently
+        stored in MongoDB, so
+        browser caching is safe.
+      */
+
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=31536000, immutable"
+      );
+
+      return res.send(
+        buffer
+      );
+
+    } catch (error) {
+      console.error(
+        "❌ IMAGE LOAD ERROR:",
+        error
+      );
+
+      return res.status(500).send(
+        "Unable to load image."
+      );
+    }
+  }
+);
+
 
 // --------------------------------------------------
 // ADMIN - ADD PRODUCT
@@ -1388,108 +1807,143 @@ app.post(
   requireAdmin,
   async (req, res) => {
     try {
-      const {
-        name,
-        price,
-        category,
-        image,
-        description,
-        stock,
-        rating
-      } = req.body || {};
+      const name =
+        String(
+          req.body?.name || ""
+        )
+          .trim()
+          .slice(0, 120);
 
-      // Clean input
-      const productName =
-        String(name || "").trim();
+      const category =
+        String(
+          req.body?.category ||
+            "Flowers"
+        )
+          .trim()
+          .slice(0, 60);
 
-      const productCategory =
-        String(category || "").trim();
+      const description =
+        String(
+          req.body?.description ||
+            ""
+        )
+          .trim()
+          .slice(0, 1200);
 
-      const productImage =
-        String(image || "").trim();
+      const image =
+        String(
+          req.body?.image || ""
+        )
+          .trim()
+          .slice(0, 500);
 
-      const productDescription =
-        String(description || "").trim();
-
-      const productPrice =
-        Number(price);
-
-      const productStock =
-        Math.max(
-          0,
-          Math.floor(Number(stock) || 0)
+      const price =
+        Number(
+          req.body?.price
         );
 
-      const productRating =
-        Math.min(
-          5,
-          Math.max(
-            0,
-            Number(rating) || 5
-          )
+      const stock =
+        Number(
+          req.body?.stock
         );
 
-      // Validate required fields
-      if (
-        !productName ||
-        !productCategory ||
-        !productImage ||
-        !productDescription ||
-        !Number.isFinite(productPrice) ||
-        productPrice < 0
-      ) {
+      const rating =
+        Number(
+          req.body?.rating
+        );
+
+      if (!name) {
         return res.status(400).json({
           message:
-            "Name, price, category, image and description are required."
+            "Product name is required."
         });
       }
 
-      // Find highest existing product ID
-      const lastProduct =
-        await products()
-          .find({})
-          .sort({ id: -1 })
-          .limit(1)
-          .next();
+      if (
+        !Number.isFinite(price) ||
+        price < 0
+      ) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid price."
+        });
+      }
 
-      const nextId =
-        lastProduct &&
-        Number.isFinite(
-          Number(lastProduct.id)
-        )
-          ? Number(lastProduct.id) + 1
-          : 1;
+      if (
+        !Number.isFinite(stock) ||
+        stock < 0
+      ) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid stock quantity."
+        });
+      }
 
-      // Create product
+      const safeRating =
+        Number.isFinite(rating)
+          ? Math.min(
+              5,
+              Math.max(
+                0,
+                rating
+              )
+            )
+          : 5;
+
+      /*
+        Generate numeric product ID
+        compatible with your frontend.
+      */
+
+      let id;
+
+      do {
+        id =
+          Date.now() +
+          Math.floor(
+            Math.random() * 1000
+          );
+      } while (
+        await products().findOne({
+          id
+        })
+      );
+
       const product = {
-        id: nextId,
+        id,
 
-        name: productName,
+        name,
 
-        price: productPrice,
+        price,
 
-        category: productCategory,
+        category,
 
-        image: productImage,
+        image,
 
-        description: productDescription,
+        description,
 
-        stock: productStock,
+        stock:
 
-        rating: productRating,
+          Math.floor(
+            stock
+          ),
+
+        rating:
+          safeRating,
 
         createdAt:
           new Date().toISOString()
       };
 
-      // Save ONLY the new product
-      await products().insertOne(product);
-
-      console.log(
-        `✅ Product added: ${product.name} (ID: ${product.id})`
+      await products().insertOne(
+        product
       );
 
-      res.status(201).json({
+      console.log(
+        `✅ Product added: ${name}`
+      );
+
+      return res.status(201).json({
         product
       });
 
@@ -1499,7 +1953,7 @@ app.post(
         error
       );
 
-      res.status(500).json({
+      return res.status(500).json({
         message:
           "Unable to add product."
       });
@@ -1507,8 +1961,9 @@ app.post(
   }
 );
 
+
 // --------------------------------------------------
-// ADMIN - EDIT PRODUCT
+// ADMIN - UPDATE PRODUCT
 // --------------------------------------------------
 
 app.put(
@@ -1517,7 +1972,18 @@ app.put(
   async (req, res) => {
     try {
       const id =
-        Number(req.params.id);
+        Number(
+          req.params.id
+        );
+
+      if (
+        !Number.isInteger(id)
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid product ID."
+        });
+      }
 
       const existing =
         await products().findOne({
@@ -1531,97 +1997,151 @@ app.put(
         });
       }
 
-      const updated = {
-        name: String(
+      const name =
+        String(
           req.body?.name ??
             existing.name
-        ).trim(),
+        )
+          .trim()
+          .slice(0, 120);
 
-        price: Number(
-          req.body?.price ??
-            existing.price
-        ),
-
-        category: String(
+      const category =
+        String(
           req.body?.category ??
             existing.category
-        ).trim(),
+        )
+          .trim()
+          .slice(0, 60);
 
-        image: String(
-          req.body?.image ??
-            existing.image
-        ).trim(),
-
-        description: String(
+      const description =
+        String(
           req.body?.description ??
             existing.description
-        ).trim(),
-
-        stock: Math.max(
-          0,
-          Math.floor(
-            Number(
-              req.body?.stock ??
-                existing.stock
-            )
-          )
-        ),
-
-        rating: Math.min(
-          5,
-          Math.max(
-            0,
-            Number(
-              req.body?.rating ??
-                existing.rating
-            )
-          )
         )
-      };
+          .trim()
+          .slice(0, 1200);
 
-      if (
-        !updated.name ||
-        !updated.category ||
-        !updated.image ||
-        !updated.description ||
-        !Number.isFinite(
-          updated.price
-        ) ||
-        updated.price < 0
-      ) {
+      const image = String(
+  req.body?.image ??
+    existing.image ??
+    ""
+)
+  .trim()
+  .slice(0, 500);
+
+      const price =
+        Number(
+          req.body?.price ??
+            existing.price
+        );
+
+      const stock =
+        Number(
+          req.body?.stock ??
+            existing.stock
+        );
+
+      const rating =
+        Number(
+          req.body?.rating ??
+            existing.rating
+        );
+
+      if (!name) {
         return res.status(400).json({
           message:
-            "Invalid product details."
+            "Product name is required."
         });
       }
 
-      await products().updateOne(
+      if (
+        !Number.isFinite(price) ||
+        price < 0
+      ) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid price."
+        });
+      }
+
+      if (
+        !Number.isFinite(stock) ||
+        stock < 0
+      ) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid stock quantity."
+        });
+      }
+
+      const safeRating =
+        Number.isFinite(rating)
+          ? Math.min(
+              5,
+              Math.max(
+                0,
+                rating
+              )
+            )
+          : 5;
+
+      const updatedProduct = {
+        ...existing,
+
+        id,
+
+        name,
+
+        price,
+
+        category,
+
+        image,
+
+        description,
+
+        stock:
+          Math.floor(
+            stock
+          ),
+
+        rating:
+          safeRating,
+
+        updatedAt:
+          new Date().toISOString()
+      };
+
+      await products().replaceOne(
         {
           id
         },
-        {
-          $set: updated
-        }
+        updatedProduct
       );
 
-      const product =
-        await products().findOne({
-          id
-        });
+      console.log(
+        `✅ Product updated: ${name}`
+      );
 
-      res.json({
-        product
+      return res.json({
+        product:
+          updatedProduct
       });
-    } catch (error) {
-      console.error(error);
 
-      res.status(500).json({
+    } catch (error) {
+      console.error(
+        "❌ UPDATE PRODUCT ERROR:",
+        error
+      );
+
+      return res.status(500).json({
         message:
           "Unable to update product."
       });
     }
   }
 );
+
 
 // --------------------------------------------------
 // ADMIN - DELETE PRODUCT
@@ -1633,43 +2153,58 @@ app.delete(
   async (req, res) => {
     try {
       const id =
-        Number(req.params.id);
+        Number(
+          req.params.id
+        );
 
-      if (!Number.isInteger(id)) {
+      if (
+        !Number.isInteger(id)
+      ) {
         return res.status(400).json({
-          message: "Invalid product ID."
+          message:
+            "Invalid product ID."
         });
       }
 
-      const result =
-        await products().deleteOne({
+      const product =
+        await products().findOne({
           id
         });
 
-      if (!result.deletedCount) {
+      if (!product) {
         return res.status(404).json({
           message:
             "Product not found."
         });
       }
 
-      // Remove deleted product from wishlists
-      await wishlists().updateMany(
-        {},
-        {
-          $pull: {
-            productIds: id
-          }
-        }
-      );
+      await products().deleteOne({
+        id
+      });
+
+      /*
+        IMPORTANT:
+
+        We intentionally DO NOT delete
+        the image from MongoDB here.
+
+        This means if the product is
+        deleted and later another
+        product uses the same image,
+        the image record remains safe.
+
+        It also prevents accidental
+        loss of existing product photos.
+      */
 
       console.log(
-        `🗑️ Product deleted: ${id}`
+        `🗑️ Product removed: ${product.name}`
       );
 
-      res.json({
+      return res.json({
         ok: true,
-        deletedId: id
+
+        productId: id
       });
 
     } catch (error) {
@@ -1678,16 +2213,16 @@ app.delete(
         error
       );
 
-      res.status(500).json({
+      return res.status(500).json({
         message:
-          "Unable to delete product."
+          "Unable to remove product."
       });
     }
   }
 );
 
 // --------------------------------------------------
-// MONGODB INITIALIZATION
+// DATABASE INITIALIZATION
 // --------------------------------------------------
 
 async function ensureDatabase() {
@@ -1697,54 +2232,35 @@ async function ensureDatabase() {
 
   await client.connect();
 
-  db = client.db(
-    MONGODB_DB
-  );
+  db = client.db(MONGODB_DB);
 
   console.log(
     `✅ MongoDB connected: ${MONGODB_DB}`
   );
 
-  const requiredCollections = [
-  "users",
-  "products",
-  "orders",
-  "wishlists",
-  "custom_orders",
-  "messages",
-  "images"
-];
-
+  // Create collections if they don't exist.
   const existingCollections =
-    new Set(
-      (
-        await db
-          .listCollections(
-            {},
-            {
-              nameOnly: true
-            }
-          )
-          .toArray()
-      ).map(
-        collection =>
-          collection.name
-      )
-    );
+    await db.listCollections().toArray();
 
-  // Create missing collections
-  for (
-    const collectionName of
-      requiredCollections
-  ) {
-    if (
-      !existingCollections.has(
-        collectionName
-      )
-    ) {
-      await db.createCollection(
-        collectionName
-      );
+  const existingNames = new Set(
+    existingCollections.map(
+      (collection) => collection.name
+    )
+  );
+
+  const requiredCollections = [
+    "users",
+    "products",
+    "orders",
+    "wishlists",
+    "custom_orders",
+    "messages",
+    "images"
+  ];
+
+  for (const collectionName of requiredCollections) {
+    if (!existingNames.has(collectionName)) {
+      await db.createCollection(collectionName);
 
       console.log(
         `✅ Created collection: ${collectionName}`
@@ -1752,43 +2268,145 @@ async function ensureDatabase() {
     }
   }
 
-  // Create indexes
-  await Promise.allSettled([
-    users().createIndex(
-      { id: 1 },
-      { unique: true }
-    ),
+  // ------------------------------------------------
+  // INDEXES
+  // ------------------------------------------------
 
-    users().createIndex(
+  /*
+    IMPORTANT:
+    Do not recreate the existing products/orders
+    "id_1" indexes. They already exist in MongoDB.
+  */
+
+  try {
+    await users().createIndex(
       { email: 1 },
-      { unique: true }
-    ),
+      {
+        unique: true,
+        name: "users_email_unique"
+      }
+    );
+  } catch (error) {
+    if (error.code !== 85 && error.code !== 86) {
+      throw error;
+    }
+  }
 
-    products().createIndex(
-      { id: 1 },
-      { unique: true }
-    ),
+  try {
+    await orders().createIndex(
+      {
+        userId: 1,
+        createdAt: -1
+      },
+      {
+        name: "orders_user_created"
+      }
+    );
+  } catch (error) {
+    if (error.code !== 85 && error.code !== 86) {
+      throw error;
+    }
+  }
 
-    orders().createIndex(
-      { id: 1 },
-      { unique: true }
-    ),
+  try {
+    await customOrders().createIndex(
+      {
+        userId: 1,
+        createdAt: -1
+      },
+      {
+        name: "custom_orders_user_created"
+      }
+    );
+  } catch (error) {
+    if (error.code !== 85 && error.code !== 86) {
+      throw error;
+    }
+  }
 
-    customOrders().createIndex(
-      { id: 1 },
-      { unique: true }
-    ),
-
-    wishlists().createIndex(
+  try {
+    await wishlists().createIndex(
       { userId: 1 },
-      { unique: true }
-    )
-  ]);
+      {
+        unique: true,
+        name: "wishlists_user_unique"
+      }
+    );
+  } catch (error) {
+    if (error.code !== 85 && error.code !== 86) {
+      throw error;
+    }
+  }
+
+  try {
+    await messages().createIndex(
+      { createdAt: -1 },
+      {
+        name: "messages_created"
+      }
+    );
+  } catch (error) {
+    if (error.code !== 85 && error.code !== 86) {
+      throw error;
+    }
+  }
+
+  try {
+    await images().createIndex(
+      { createdAt: -1 },
+      {
+        name: "images_created"
+      }
+    );
+  } catch (error) {
+    if (error.code !== 85 && error.code !== 86) {
+      throw error;
+    }
+  }
 
   console.log(
     "✅ MongoDB indexes ready."
   );
 }
+
+
+// --------------------------------------------------
+// ERROR HANDLER
+// --------------------------------------------------
+
+app.use(
+  (err, req, res, next) => {
+    console.error(
+      "❌ UNHANDLED SERVER ERROR:",
+      err
+    );
+
+    if (res.headersSent) {
+      return next(err);
+    }
+
+    return res.status(500).json({
+      message:
+        "Something went wrong on the server."
+    });
+  }
+);
+
+
+// --------------------------------------------------
+// 404 API HANDLER
+// --------------------------------------------------
+
+app.use(
+  "/api",
+  (req, res) => {
+    res.status(404).json({
+      message:
+        "API endpoint not found."
+    });
+  }
+);
+
 
 // --------------------------------------------------
 // START SERVER
@@ -1822,30 +2440,48 @@ async function start() {
   }
 }
 
+
 // --------------------------------------------------
-// CLEAN SHUTDOWN
+// GRACEFUL SHUTDOWN
 // --------------------------------------------------
+
+async function shutdown(signal) {
+  console.log(
+    `\n${signal} received. Shutting down...`
+  );
+
+  try {
+    await client.close();
+
+    console.log(
+      "MongoDB connection closed."
+    );
+
+    process.exit(0);
+  } catch (error) {
+    console.error(
+      "Error while closing MongoDB:",
+      error
+    );
+
+    process.exit(1);
+  }
+}
+
 
 process.on(
   "SIGINT",
-  async () => {
-    try {
-      await client.close();
-    } finally {
-      process.exit(0);
-    }
-  }
+  () => shutdown("SIGINT")
 );
 
 process.on(
   "SIGTERM",
-  async () => {
-    try {
-      await client.close();
-    } finally {
-      process.exit(0);
-    }
-  }
+  () => shutdown("SIGTERM")
 );
+
+
+// --------------------------------------------------
+// START APPLICATION
+// --------------------------------------------------
 
 start();
