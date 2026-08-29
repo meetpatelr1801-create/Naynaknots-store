@@ -1,19 +1,11 @@
 import express from "express";
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
 import dns from "dns";
-import { fileURLToPath } from "url";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import "dotenv/config";
 import cors from "cors";
 
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
-
-const dir = path.dirname(fileURLToPath(import.meta.url));
-const uploadsDir = path.join(dir, "uploads");
-
-fs.mkdirSync(uploadsDir, { recursive: true });
 
 const PORT = Number(process.env.PORT || 5000);
 const HOST = process.env.HOST || "0.0.0.0";
@@ -48,6 +40,9 @@ const wishlists = () => db.collection("wishlists");
 const customOrders = () =>
   db.collection("custom_orders");
 const messages = () => db.collection("messages");
+
+// Permanent product images
+const images = () => db.collection("images");
 
 function hashPassword(
   password,
@@ -266,11 +261,6 @@ app.use((req, res, next) => {
   );
   next();
 });
-
-app.use(
-  "/uploads",
-  express.static(uploadsDir)
-);
 
 app.get("/api/health", (_, res) => {
   res.json({
@@ -1225,6 +1215,91 @@ app.patch(
   }
 );
 
+
+// --------------------------------------------------
+// ADMIN - IMAGE UPLOAD
+// PERMANENT MONGODB STORAGE
+// --------------------------------------------------
+
+app.post(
+  "/api/admin/upload-image",
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { dataUrl } = req.body || {};
+
+      if (
+        typeof dataUrl !== "string" ||
+        !dataUrl.startsWith("data:image/")
+      ) {
+        return res.status(400).json({
+          message: "Please select a valid image."
+        });
+      }
+
+      const match = dataUrl.match(
+        /^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/
+      );
+
+      if (!match) {
+        return res.status(400).json({
+          message:
+            "Only PNG, JPG or WebP images are supported."
+        });
+      }
+
+      const mimeType =
+        match[1] === "jpg" || match[1] === "jpeg"
+          ? "image/jpeg"
+          : `image/${match[1]}`;
+
+      const buffer = Buffer.from(
+        match[2],
+        "base64"
+      );
+
+      // Maximum 5 MB
+      if (buffer.length > 5 * 1024 * 1024) {
+        return res.status(400).json({
+          message:
+            "Image must be smaller than 5 MB."
+        });
+      }
+
+      // Save image permanently in MongoDB
+      const result = await images().insertOne({
+        data: buffer,
+        contentType: mimeType,
+        size: buffer.length,
+        createdAt: new Date().toISOString()
+      });
+
+      const imageUrl =
+        `/api/images/${result.insertedId.toString()}`;
+
+      console.log(
+        `✅ Image saved permanently: ${result.insertedId}`
+      );
+
+      res.status(201).json({
+        url: imageUrl,
+        imageId: result.insertedId.toString()
+      });
+    } catch (error) {
+      console.error(
+        "❌ IMAGE UPLOAD ERROR:",
+        error
+      );
+
+      res.status(500).json({
+        message:
+          "Unable to upload image."
+      });
+    }
+  }
+);
+
+
 // --------------------------------------------------
 // ADMIN - IMAGE UPLOAD
 // --------------------------------------------------
@@ -1631,13 +1706,14 @@ async function ensureDatabase() {
   );
 
   const requiredCollections = [
-    "users",
-    "products",
-    "orders",
-    "wishlists",
-    "custom_orders",
-    "messages"
-  ];
+  "users",
+  "products",
+  "orders",
+  "wishlists",
+  "custom_orders",
+  "messages",
+  "images"
+];
 
   const existingCollections =
     new Set(
